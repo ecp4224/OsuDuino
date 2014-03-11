@@ -7,8 +7,8 @@ int rightClickPort = 10;
 //Clicking vars
 boolean leftClicking = false;
 int leftClickStart = 0;
-int leftClickDown = 10;
-int leftClickUp = 0;
+int leftClickDown = 3;
+int leftClickUp = 15;
 
 boolean rightClicking = false;
 int rightClickStart = 0;
@@ -29,14 +29,22 @@ void loop() {
   byte opCode = Serial.read();
   switch (opCode) {
     case 1: //Left click
-      beginLeftClick();
+      performLeftClick();
       break;
   } 
  }
  
  if (leftClicking) {
    continueLeftClick();
+ } else {
+   leftClick.write(leftClickUp);
  }
+}
+
+void performLeftClick() {
+  leftClick.write(leftClickDown);
+  delay(80);
+  leftClick.write(leftClickUp);
 }
 
 void beginLeftClick() {
@@ -47,7 +55,7 @@ void beginLeftClick() {
 
 void continueLeftClick() {
  leftClickStart++;
- if (leftClickStart > 100) {
+ if (leftClickStart > 2500) {
   leftClickStart = 0;
   leftClicking = false;
   leftClick.write(leftClickUp);
