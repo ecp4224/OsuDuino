@@ -22,14 +22,24 @@ namespace OsuPlayer.Core
             port.Write(data, 0, data.Length);
         }
 
-        public static void RequestLeftClick()
+        public static void RequestLeftDown()
         {
-            SendCommand(new byte[] { (byte)OpCode.LeftClick });
+            SendCommand(new byte[] { (byte)OpCode.LeftDown });
         }
 
-        public static void RequestRightClick()
+        public static void RequestLeftUp()
         {
-            SendCommand(new byte[] { (byte)OpCode.RightClick });
+            SendCommand(new byte[] { (byte)OpCode.LeftUp });
+        }
+
+        public static void RequestRightDown()
+        {
+            SendCommand(new byte[] { (byte)OpCode.RightDown });
+        }
+
+        public static void RequestRightUp()
+        {
+            SendCommand(new byte[] { (byte)OpCode.RightUp });
         }
 
         public static void StopMotors()
@@ -49,11 +59,13 @@ namespace OsuPlayer.Core
 
         public enum OpCode : byte
         {
-            LeftClick = 1,
-            RightClick = 2,
-            SetMotorX = 4,
-            SetMotorY = 8,
-            Stop = 16
+            LeftDown = 1,
+            RightDown = 2,
+            LeftUp = 4,
+            RightUp = 8,
+            SetMotorX = 16,
+            SetMotorY = 32,
+            Stop = 64
         }
     }
 }

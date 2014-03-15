@@ -22,8 +22,16 @@ namespace OsuPlayer
         {
             InitializeComponent();
             button1.Enabled = false;
+            comboBox1.Sorted = true;
             Setup();
             MouseMover.Init();
+            timer1.Start();
+        }
+
+        ~MainMenu()
+        {
+            timer1.Stop();
+            timer1.Dispose();
         }
 
         private ProgressDialog search;
@@ -161,8 +169,25 @@ namespace OsuPlayer
 
         private void button1_Click(object sender, EventArgs e)
         {
-            if (comboBox1.SelectedIndex == -1) return;
-            MouseMover.Prepare((Song)comboBox1.SelectedItem);
+            if (!MouseMover.Playing)
+            {
+                if (comboBox1.SelectedIndex == -1) return;
+                MouseMover.Prepare((Song)comboBox1.SelectedItem);
+            }
+            else
+            {
+                MouseMover.Stop();
+            }
+        }
+
+        private void timer1_Tick(object sender, EventArgs e)
+        {
+            if (MouseMover.Playing)
+                button1.Text = "Stop";
+            else if (MouseMover.Waiting)
+                button1.Text = "Waiting..";
+            else
+                button1.Text = "Start";
         }
     }
 
