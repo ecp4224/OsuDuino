@@ -17,8 +17,8 @@ namespace OsuPlayer.Core
         
         public static void SendCommand(byte[] data)
         {
-            if (!port.IsOpen)
-                throw new InvalidOperationException("The Arduino port is not open!");
+            if (port == null) return;
+            if (!port.IsOpen) return;
             port.Write(data, 0, data.Length);
         }
 
