@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using gma.System.Windows;
 using System.Threading;
+using OsuPlayer.Core.Osu;
 
 namespace OsuPlayer.Core
 {
@@ -24,6 +25,26 @@ namespace OsuPlayer.Core
             private set;
         }
         private static long startedTime;
+        public static int TargetX
+        {
+            get;
+            private set;
+        }
+        public static int TargetY
+        {
+            get;
+            private set;
+        }
+        public static int CurrentX
+        {
+            get;
+            private set;
+        }
+        public static int CurrentY
+        {
+            get;
+            private set;
+        }
         
         private static UserActivityHook mouseHook;
         
@@ -32,7 +53,8 @@ namespace OsuPlayer.Core
             mouseHook = new UserActivityHook();
             mouseHook.OnMouseActivity += mouseHook_OnMouseActivity;
         }
-        public static void Prepare(Song song) {
+        public static void Prepare(Song song)
+        {
             playingSong = song;
             Waiting = true;
             startClicks = 3;
@@ -45,7 +67,8 @@ namespace OsuPlayer.Core
 
         static void mouseHook_OnMouseActivity(object sender, System.Windows.Forms.MouseEventArgs e)
         {
-            System.Diagnostics.Debug.WriteLine(e.Location.X + " : " + e.Location.Y);
+            CurrentX = e.Location.X;
+            CurrentY = e.Location.Y;
             if (Waiting)
             {
                 if (e.Button == System.Windows.Forms.MouseButtons.Right)
@@ -74,40 +97,96 @@ namespace OsuPlayer.Core
             long lastLeftClick = 0;
             bool leftDown = false;
             bool doingSlider = false;
-            Beat previousBeat;
+            int pointIndex = 0;
+            long lastSlide = 0;
+            long duration = 80;
+            Beat previousBeat = null;
             while (playingSong.Beats.Count > 0 && Playing)
             {
                 long milliseconds = DateTime.Now.Ticks / TimeSpan.TicksPerMillisecond;
                 milliseconds += start;
                 long songTime = milliseconds - startedTime + 80;
+                playingSong.UpdateTimer(songTime);
                 Beat beat = playingSong.Beats.Peek();
+                Timing timer = playingSong.CurrentTimer;
 
-                if (leftDown && !doingSlider)
+
+                if (doingSlider)
                 {
-                    long hold = (beat.Time - lastLeftClick) / 3L;
-                    if (hold > 100 || hold < 10) hold = 80;
-                    if (milliseconds - lastLeftClick >= hold)
+                    if (previousBeat == null || !previousBeat.IsSlider)
                     {
-                        Arduino.RequestLeftUp();
+                        doingSlider = false;
                         leftDown = false;
+                        Arduino.RequestLeftUp();
+                    }
+                    else
+                    {
+                        long diff = songTime - lastSlide;
+                        if (timer.CalculateBeats(diff) >= 1)
+                        {
+                            pointIndex++;
+                            if (pointIndex < previousBeat.SliderPoints.points.Count)
+                            {
+                                lastSlide = songTime;
+                                TargetX = previousBeat.SliderPoints.points[pointIndex].X;
+                                TargetY = previousBeat.SliderPoints.points[pointIndex].Y;
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    TargetX = beat.X;
+                    TargetY = beat.Y;
+                }
+
+                if (leftDown)
+                {
+                    if (doingSlider)
+                    {
+                        long time = (milliseconds - lastLeftClick);
+                        if (time >= duration)
+                        {
+                            Arduino.RequestLeftUp();
+                            leftDown = false;
+                            doingSlider = false;
+                            previousBeat = null;
+                        }
+                    }
+                    else
+                    {
+                        long hold = (beat.Time - lastLeftClick) / 3L;
+                        if (hold > 100 || hold < 10) hold = 80;
+                        if (milliseconds - lastLeftClick >= hold || beat.Time - songTime < 30)
+                        {
+                            Arduino.RequestLeftUp();
+                            leftDown = false;
+                        }
                     }
                 }
 
                 if (songTime > beat.Time)
                 {
-                    //if (!beat.IsSlider)
-                    //{
+                    if (!beat.IsSlider)
+                    {
                         Arduino.RequestLeftDown();
                         leftDown = true;
                         lastLeftClick = milliseconds;
-                    //}
-                    //else
-                    //{
-                    //    doingSlider = true;
-                    //    Arduino.RequestLeftDown();
-                    //}
+                        previousBeat = playingSong.Beats.Dequeue();
+                    }
+                    else
+                    {
+                        doingSlider = true;
+                        leftDown = true;
+                        pointIndex = 0;
+                        lastLeftClick = milliseconds;
+                        previousBeat = playingSong.Beats.Dequeue();
+                        duration = (long)timer.MillisecondsPerBeat;
+                        duration -= 80;
+                        lastSlide = songTime;
+                        Arduino.RequestLeftDown();
+                    }
 
-                    previousBeat = playingSong.Beats.Dequeue();
                     temp.Enqueue(previousBeat);
                 }
             }

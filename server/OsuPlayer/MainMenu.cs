@@ -10,6 +10,7 @@ using System.IO;
 using System.Threading;
 using OsuPlayer.Core;
 using Ookii.Dialogs;
+using OsuPlayer.Core.Osu;
 
 namespace OsuPlayer
 {
@@ -41,10 +42,10 @@ namespace OsuPlayer
             search = new ProgressDialog()
             {
                 WindowTitle = "Osu! Player..",
-                Description = "Please wait while I search for osu! songs..",
-                Text = "Found 0 songs",
+                Description = "Hooking into Osu! window..",
                 ShowTimeRemaining = true,
-                ShowCancelButton = false
+                ShowCancelButton = false,
+                ProgressBarStyle = Ookii.Dialogs.ProgressBarStyle.MarqueeProgressBar
             };
             search.DoWork += search_DoWork;
 
@@ -64,37 +65,31 @@ namespace OsuPlayer
         {
             setStatusText("Searching for osu! songs..");
 
-            string osuDir = "C:\\Program Files\\osu!\\Songs";
-            if (!Directory.Exists(osuDir))
+            while (true)
             {
-                osuDir = "C:\\Program Files (x86)\\osu!\\Songs";
-                if (!Directory.Exists(osuDir)) return;
-            }
-
-            string[] folders = Directory.GetDirectories(osuDir);
-            int percent = 0;
-            int count = 0;
-            for (int i = 0; i < folders.Length; i++)
-            {
-                string folder = folders[i];
-                percent = (int)((double)((double)i / (double)folders.Length) * 100.0);
-                search.ReportProgress(percent, null, null);
-
-
-                string[] files = Directory.GetFiles(folder, "*.osu");
-                foreach (string file in files)
+                try
                 {
-                    Song song = new Song()
-                    {
-                        Name = Path.GetFileName(file).Split('.')[0],
-                        Path = file
-                    };
-                    song.Beats = Beat.FromSong(song);
-                    AddItem(song);
-                    count++;
-                    search.ReportProgress(percent, "Found " + count + " song" + (count != 1 ? "s" : ""), null);
+                    Thread.Sleep(3000);
+                    OsuBridge.SearchForOsuWindow();
+                    search.ReportProgress(0, "Found 0 songs", "Please wait while I search for osu! songs..");
+                    break;
+                }
+                catch
+                {
+                    DialogResult result = MessageBox.Show("There was a problem with hooking into the osu! window.\nIs it open?", "OsuDuino", MessageBoxButtons.AbortRetryIgnore, MessageBoxIcon.Error);
+                    if (result == System.Windows.Forms.DialogResult.Abort) return;
+                    else if (result == System.Windows.Forms.DialogResult.Retry) continue;
+                    else break;
                 }
             }
+
+            int count = 0;
+            OsuBridge.LoadAllSongs(new OsuBridge.FoundSongCallback(delegate(Song song)
+            {
+                AddItem(song);
+                count++;
+                search.ReportProgress(0, "Found " + count + " song" + (count != 1 ? "s" : ""), null);
+            }));
 
             setStatusText("Done!");
         }
@@ -188,19 +183,9 @@ namespace OsuPlayer
                 button1.Text = "Waiting..";
             else
                 button1.Text = "Start";
-        }
-    }
 
-
-    public class Song
-    {
-        public string Path;
-        public string Name;
-        public Queue<Beat> Beats;
-
-        public override string ToString()
-        {
-            return Name;
+            curPos.Text = "Mouse X: " + MouseMover.CurrentX + " Mouse Y: " + MouseMover.CurrentY;
+            label2.Text = "Target X: " + MouseMover.TargetX + " Target Y: " + MouseMover.TargetY;
         }
     }
 }
