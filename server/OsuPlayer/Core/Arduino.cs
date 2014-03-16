@@ -47,14 +47,20 @@ namespace OsuPlayer.Core
             SendCommand(new byte[] { (byte)OpCode.Stop });
         }
 
-        public static void MoveX(byte power = 255)
+        public static void MoveX(Direction direction, byte power = 255)
         {
-            SendCommand(new byte[] { (byte)OpCode.SetMotorX, power });
+            SendCommand(new byte[] { (byte)OpCode.SetMotorX, power, (byte)direction });
         }
 
-        public static void MoveY(byte power = 255)
+        public static void MoveY(Direction direction, byte power = 255)
         {
-            SendCommand(new byte[] { (byte)OpCode.SetMotorY, power });
+            SendCommand(new byte[] { (byte)OpCode.SetMotorY, power, (byte)direction });
+        }
+
+        public enum Direction : byte
+        {
+            Foward = 1,
+            Back = 2
         }
 
         public enum OpCode : byte
