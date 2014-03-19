@@ -58,8 +58,8 @@ namespace OsuPlayer.Core.Osu
                             
                             Slider slider = Slider.fromString(line.Split(',')[5], repeat);
                             
-                            int temp = 100;
-                            if (line.Split(',').Length > 7) int.TryParse(line.Split(',')[7], out temp);
+                            double temp = 100;
+                            if (line.Split(',').Length > 7) double.TryParse(line.Split(',')[7], out temp);
                             slider.LengthToEnd = temp;
 
                             beat.SliderPoints = slider;
@@ -87,14 +87,15 @@ namespace OsuPlayer.Core.Osu
         public class Slider
         {
             public bool PressAndHold { get; private set; }
-            public int LengthToEnd;
+            public double LengthToEnd;
+            public int Repeats { get; private set; }
             public List<SliderData> points = new List<SliderData>();
 
             private Slider() { }
             public static Slider fromString(string str, int repeat)
             {
                 Slider slider = new Slider();
-
+                slider.Repeats = repeat;
                 string[] data = str.Split('|');
                 for (int i = 1; i < data.Length; i++)
                 {

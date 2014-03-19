@@ -71,6 +71,13 @@ namespace OsuPlayer
                 {
                     Thread.Sleep(3000);
                     OsuBridge.SearchForOsuWindow();
+                    if (OsuBridge.OsuWindow.Size.Width == 0 && OsuBridge.OsuWindow.Size.Height == 0)
+                    {
+                        DialogResult result = MessageBox.Show("There was a problem with hooking into the osu! window.\nIs it open?", "OsuDuino", MessageBoxButtons.AbortRetryIgnore, MessageBoxIcon.Error);
+                        if (result == System.Windows.Forms.DialogResult.Abort) return;
+                        else if (result == System.Windows.Forms.DialogResult.Retry) continue;
+                        else break;
+                    }
                     search.ReportProgress(0, "Found 0 songs", "Please wait while I search for osu! songs..");
                     break;
                 }

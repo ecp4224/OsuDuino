@@ -11,6 +11,7 @@ namespace OsuPlayer.Core
     public class MouseMover
     {
         private static Song playingSong;
+        public const bool ISITWORKING = false;
         private static int startClicks = 3;
         public static bool Waiting
         {
@@ -65,6 +66,16 @@ namespace OsuPlayer.Core
             Playing = false;
         }
 
+        static int TranslateX(int x)
+        {
+            return (((x * OsuBridge.OsuWindow.Size.Width) / 640) + OsuBridge.OsuWindow.Location.X) + 75;
+        }
+
+        static int TranslateY(int y)
+        {
+            return (((y * OsuBridge.OsuWindow.Size.Height) / 480) + OsuBridge.OsuWindow.Location.Y) + 75;
+        }
+
         static void mouseHook_OnMouseActivity(object sender, System.Windows.Forms.MouseEventArgs e)
         {
             CurrentX = e.Location.X;
@@ -73,20 +84,22 @@ namespace OsuPlayer.Core
             {
                 if (e.Button == System.Windows.Forms.MouseButtons.Right)
                 {
-                    //startClicks--;
-                    //if (startClicks > 0)
-                    //{
-                    //    System.Windows.Forms.MessageBox.Show("" + startClicks);
-                    //    return;
-                   // }
                     Waiting = false;
                     first = true;
                     startedTime = DateTime.Now.Ticks / TimeSpan.TicksPerMillisecond;
                     started = true;
                     Playing = true;
                     new Thread(new ThreadStart(ProcessSong)).Start();
-                    //System.Windows.Forms.MessageBox.Show("Starting!");
                 }
+            }
+        }
+
+        static void MoveMouse()
+        {
+            while (Playing)
+            {
+                
+                Thread.Sleep(1);
             }
         }
 
@@ -103,6 +116,7 @@ namespace OsuPlayer.Core
             Beat previousBeat = null;
             while (playingSong.Beats.Count > 0 && Playing)
             {
+                //CHECK CLICK
                 long milliseconds = DateTime.Now.Ticks / TimeSpan.TicksPerMillisecond;
                 milliseconds += start;
                 long songTime = milliseconds - startedTime + 80;
@@ -128,16 +142,16 @@ namespace OsuPlayer.Core
                             if (pointIndex < previousBeat.SliderPoints.points.Count)
                             {
                                 lastSlide = songTime;
-                                TargetX = previousBeat.SliderPoints.points[pointIndex].X;
-                                TargetY = previousBeat.SliderPoints.points[pointIndex].Y;
+                                TargetX = TranslateX(previousBeat.SliderPoints.points[pointIndex].X);
+                                TargetY = TranslateY(previousBeat.SliderPoints.points[pointIndex].Y);
                             }
                         }
                     }
                 }
                 else
                 {
-                    TargetX = beat.X;
-                    TargetY = beat.Y;
+                    TargetX = TranslateX(beat.X);
+                    TargetY = TranslateY(beat.Y);
                 }
 
                 if (leftDown)
@@ -181,18 +195,56 @@ namespace OsuPlayer.Core
                         pointIndex = 0;
                         lastLeftClick = milliseconds;
                         previousBeat = playingSong.Beats.Dequeue();
-                        duration = (long)timer.MillisecondsPerBeat;
-                        duration -= 80;
+                        duration = (long)(timer.MillisecondsPerBeat * (beat.SliderPoints.LengthToEnd / 100.0));
+                        duration *= beat.SliderPoints.Repeats;
+                        if (playingSong.Beats.Count > 0)
+                        {
+                            duration -= (long)((timer.MillisecondsPerBeat / 2.0) - (playingSong.Beats.Peek().Time - (songTime + duration)));
+                        }
+                        else
+                        {
+                            duration -= 80;
+                        }
+                        System.Diagnostics.Debug.WriteLine(duration);
                         lastSlide = songTime;
                         Arduino.RequestLeftDown();
                     }
 
                     temp.Enqueue(previousBeat);
                 }
+
+                if (ISITWORKING)
+                {
+                    //CHECK MOVEMENT
+                    if (Math.Abs(CurrentX - TargetX) < 5)
+                    {
+                        Arduino.StopX();
+                    }
+                    else
+                    {
+                        if (CurrentX > TargetX)
+                            Arduino.MoveLeft();
+                        else
+                            Arduino.MoveRight();
+                    }
+
+                    if (Math.Abs(CurrentY - TargetY) < 5)
+                    {
+                        Arduino.StopY();
+                    }
+                    else
+                    {
+                        if (CurrentY > TargetY)
+                            Arduino.MoveUp();
+                        else
+                            Arduino.MoveDown();
+                    }
+                }
             }
 
             Arduino.RequestLeftUp();
-            Arduino.RequestRightUp();
+            Arduino.StopX();
+            Arduino.StopY();
 
             while (playingSong.Beats.Count > 0)
             {

@@ -9,12 +9,13 @@ namespace OsuPlayer.Core
     public class Arduino
     {
         private static SerialPort port;
+        private static OpCode lastX, lastY;
         public static void Init(string portName)
         {
             port = new SerialPort(portName, 9600);
             port.Open();
         }
-        
+
         public static void SendCommand(byte[] data)
         {
             if (port == null) return;
@@ -32,46 +33,58 @@ namespace OsuPlayer.Core
             SendCommand(new byte[] { (byte)OpCode.LeftUp });
         }
 
-        public static void RequestRightDown()
+        public static void MoveLeft()
         {
-            SendCommand(new byte[] { (byte)OpCode.RightDown });
+            if (lastX == OpCode.MoveLeft) return;
+            else lastX = OpCode.MoveLeft;
+            SendCommand(new byte[] { (byte)OpCode.MoveLeft });
         }
 
-        public static void RequestRightUp()
+        public static void MoveRight()
         {
-            SendCommand(new byte[] { (byte)OpCode.RightUp });
+            if (lastX == OpCode.MoveRight) return;
+            else lastX = OpCode.MoveRight;
+            SendCommand(new byte[] { (byte)OpCode.MoveRight });
         }
 
-        public static void StopMotors()
+        public static void MoveUp()
         {
-            SendCommand(new byte[] { (byte)OpCode.Stop });
+            if (lastY == OpCode.MoveUp) return;
+            else lastY = OpCode.MoveUp;
+            SendCommand(new byte[] { (byte)OpCode.MoveUp });
         }
 
-        public static void MoveX(Direction direction, byte power = 255)
+        public static void MoveDown()
         {
-            SendCommand(new byte[] { (byte)OpCode.SetMotorX, power, (byte)direction });
+            if (lastY == OpCode.MoveDown) return;
+            else lastY = OpCode.MoveDown;
+            SendCommand(new byte[] { (byte)OpCode.MoveDown });
         }
 
-        public static void MoveY(Direction direction, byte power = 255)
+        public static void StopX()
         {
-            SendCommand(new byte[] { (byte)OpCode.SetMotorY, power, (byte)direction });
+            if (lastX == OpCode.StopX) return;
+            else lastX = OpCode.StopX;
+            SendCommand(new byte[] { (byte)OpCode.StopX });
         }
 
-        public enum Direction : byte
+        public static void StopY()
         {
-            Foward = 1,
-            Back = 2
+            if (lastY == OpCode.StopY) return;
+            else lastY = OpCode.StopY;
+            SendCommand(new byte[] { (byte)OpCode.StopY });
         }
 
         public enum OpCode : byte
         {
             LeftDown = 1,
-            RightDown = 2,
-            LeftUp = 4,
-            RightUp = 8,
-            SetMotorX = 16,
-            SetMotorY = 32,
-            Stop = 64
+            LeftUp = 2,
+            MoveLeft = 4,
+            MoveRight = 8,
+            StopX = 16,
+            MoveUp = 32,
+            MoveDown = 64,
+            StopY = 128
         }
     }
 }
